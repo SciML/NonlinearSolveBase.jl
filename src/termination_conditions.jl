@@ -78,17 +78,17 @@ end
 # Core Implementation
 @concrete mutable struct NonlinearTerminationModeCache{uType, T}
     u::uType
-    retcode::SciMLBase.ReturnCode.T
+    retcode::ReturnCode.T
     abstol::T
     reltol::T
     best_objective_value::T
     mode
     initial_objective
-    objectives_trace::Vector{T}
+    objectives_trace
     nsteps::Int
     saved_values
     u0_norm
-    step_norm_trace::Vector{T}
+    step_norm_trace
     max_stalled_steps
     u_diff_cache::uType
 end
@@ -141,7 +141,7 @@ function SciMLBase.init(
                       NONLINEARSOLVE_DEFAULT_NORM(u)
         end
         objectives_trace = Vector{TT}(undef, mode.patience_steps)
-        step_norm_trace = mode.max_stalled_steps === nothing ? TT[] :
+        step_norm_trace = mode.max_stalled_steps === nothing ? nothing :
                           Vector{TT}(undef, mode.max_stalled_steps)
         best_value = initial_objective
         max_stalled_steps = mode.max_stalled_steps
@@ -154,9 +154,9 @@ function SciMLBase.init(
         end
     else
         initial_objective = nothing
-        objectives_trace = TT[]
+        objectives_trace = nothing
         u0_norm = nothing
-        step_norm_trace = TT[]
+        step_norm_trace = nothing
         best_value = __cvt_real(T, Inf)
         max_stalled_steps = nothing
         u_diff_cache = u_
@@ -165,7 +165,7 @@ function SciMLBase.init(
     length(saved_value_prototype) == 0 && (saved_value_prototype = nothing)
 
     return NonlinearTerminationModeCache(
-        u_, SciMLBase.ReturnCode.Default, abstol, reltol, best_value, mode,
+        u_, ReturnCode.Default, abstol, reltol, best_value, mode,
         initial_objective, objectives_trace, 0, saved_value_prototype,
         u0_norm, step_norm_trace, max_stalled_steps, u_diff_cache)
 end
@@ -180,7 +180,7 @@ function SciMLBase.reinit!(
     u_ = mode isa AbstractSafeBestNonlinearTerminationMode ?
          (ArrayInterface.can_setindex(u) ? copy(u) : u) : nothing
     cache.u = u_
-    cache.retcode = SciMLBase.ReturnCode.Default
+    cache.retcode = ReturnCode.Default
 
     cache.abstol = get_tolerance(abstol, T)
     cache.reltol = get_tolerance(reltol, T)
@@ -219,7 +219,11 @@ end
 
 function (cache::NonlinearTerminationModeCache)(
         mode::AbstractNonlinearTerminationMode, du, u, uprev, args...)
-    return check_convergence(mode, du, u, uprev, cache.abstol, cache.reltol)
+    if check_convergence(mode, du, u, uprev, cache.abstol, cache.reltol)
+        cache.retcode = ReturnCode.Success
+        return true
+    end
+    return false
 end
 
 function (cache::NonlinearTerminationModeCache)(

@@ -8,10 +8,12 @@ import PrecompileTools: @recompile_invalidations
     import FastClosures: @closure
     import LinearAlgebra: norm
     import Markdown: @doc_str
+    import SciMLBase: ReturnCode
 end
 
 include("common_defaults.jl")
 include("termination_conditions.jl")
+include("recursivearraytools.jl")
 include("utils.jl")
 
 export NormTerminationMode, AbsTerminationMode, RelTerminationMode, AbsNormTerminationMode,
