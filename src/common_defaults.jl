@@ -4,12 +4,11 @@
 @inline function UNITLESS_ABS2(x::AbstractArray)
     return mapreduce(UNITLESS_ABS2, __abs2_and_sum, x, init = __default_init(x))
 end
-@inline function UNITLESS_ABS2(x::RecursiveArrayTools.AbstractVectorOfArray)
-    return mapreduce(UNITLESS_ABS2, __abs2_and_sum, x.u, init = __default_init(x))
-end
-@inline function UNITLESS_ABS2(x::RecursiveArrayTools.ArrayPartition)
-    return mapreduce(UNITLESS_ABS2, __abs2_and_sum, x.x, init = __default_init(x))
-end
+
+@inline NAN_CHECK(x::Number) = isnan(x)
+@inline NAN_CHECK(x::Float64) = isnan(x) || (x > 1e50)
+@inline NAN_CHECK(x::Enum) = false
+@inline NAN_CHECK(x::AbstractArray) = any(NAN_CHECK, x)
 
 # Default Norm is the L₂-norm
 @inline NONLINEARSOLVE_DEFAULT_NORM(u::Union{AbstractFloat, Complex}) = @fastmath abs(u)

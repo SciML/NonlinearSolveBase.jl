@@ -110,18 +110,24 @@ end
 __cvt_real(::Type{T}, ::Nothing) where {T} = nothing
 __cvt_real(::Type{T}, x) where {T} = real(T(x))
 
-_get_tolerance(η, ::Type{T}) where {T} = __cvt_real(T, η)
-function _get_tolerance(::Nothing, ::Type{T}) where {T}
+get_tolerance(η, ::Type{T}) where {T} = __cvt_real(T, η)
+function get_tolerance(::Nothing, ::Type{T}) where {T}
     η = real(oneunit(T)) * (eps(real(one(T))))^(4 // 5)
-    return _get_tolerance(η, T)
+    return get_tolerance(η, T)
+end
+## Rational numbers don't work in GPU kernels
+get_tolerance(x, tol, ::Type{T}) where {T} = get_tolerance(tol, T)
+function get_tolerance(
+        x::Union{StaticArraysCore.StaticArray, Number}, tol::Nothing, ::Type{T}) where {T}
+    return T(real(oneunit(T)) * (eps(real(one(T))))^(real(T)(0.8)))
 end
 
 function SciMLBase.init(
         du, u, mode::AbstractNonlinearTerminationMode, saved_value_prototype...;
         abstol = nothing, reltol = nothing, kwargs...)
     T = promote_type(eltype(du), eltype(u))
-    abstol = _get_tolerance(abstol, T)
-    reltol = _get_tolerance(reltol, T)
+    abstol = get_tolerance(abstol, T)
+    reltol = get_tolerance(reltol, T)
     TT = typeof(abstol)
     u_ = mode isa AbstractSafeBestNonlinearTerminationMode ?
          (ArrayInterface.can_setindex(u) ? copy(u) : u) : nothing
@@ -159,7 +165,7 @@ function SciMLBase.init(
     length(saved_value_prototype) == 0 && (saved_value_prototype = nothing)
 
     return NonlinearTerminationModeCache(
-        y_, SciMLBase.ReturnCode.Default, abstol, reltol, best_value, mode,
+        u_, SciMLBase.ReturnCode.Default, abstol, reltol, best_value, mode,
         initial_objective, objectives_trace, 0, saved_value_prototype,
         u0_norm, step_norm_trace, max_stalled_steps, u_diff_cache)
 end
@@ -176,8 +182,8 @@ function SciMLBase.reinit!(
     cache.u = u_
     cache.retcode = SciMLBase.ReturnCode.Default
 
-    cache.abstol = _get_tolerance(abstol, T)
-    cache.reltol = _get_tolerance(reltol, T)
+    cache.abstol = get_tolerance(abstol, T)
+    cache.reltol = get_tolerance(reltol, T)
     cache.nsteps = 0
     TT = typeof(cache.abstol)
 
