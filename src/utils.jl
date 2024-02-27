@@ -27,3 +27,6 @@ end
     return reduce(Base.add_sum, x, init = zero(real(value(eltype(x))))) +
            reduce(Base.add_sum, y, init = zero(real(value(eltype(y)))))
 end
+
+@inline __value(::Type{T}) where {T} = T
+@inline __value(x) = x

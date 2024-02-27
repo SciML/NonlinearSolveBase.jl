@@ -1,4 +1,4 @@
-@inline __default_init(x) = zero(real(value(eltype(x))))
+@inline __default_init(x) = zero(real(__value(eltype(x))))
 
 @inline UNITLESS_ABS2(x::Number) = abs2(x)
 @inline function UNITLESS_ABS2(x::AbstractArray)
