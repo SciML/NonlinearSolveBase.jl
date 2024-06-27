@@ -1,6 +1,4 @@
-@recompile_invalidations begin
-    import RecursiveArrayTools
-end
+import RecursiveArrayTools
 
 @inline function UNITLESS_ABS2(x::RecursiveArrayTools.AbstractVectorOfArray)
     return mapreduce(UNITLESS_ABS2, NonlinearSolveBase.__abs2_and_sum,
